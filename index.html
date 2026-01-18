@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .invoice-preview {
+      background: white;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+    @media print {
+      .no-print { display: none !important; }
+      .invoice-preview { box-shadow: none; }
+      @page {
+        size: A5 landscape;
+        margin: 10mm;
+      }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-gray-50 text-gray-800"><!-- Login Screen -->
+  <div id="loginScreen" class="h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+   <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div class="text-center mb-8">
+     <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
+      <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+     </div>
+     <h1 class="text-2xl font-bold text-gray-900">Invoice Generator</h1>
+     <p class="text-gray-500 mt-2">Sign in to continue</p>
+    </div>
+    <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
+     <div><label for="loginUsername" class="block text-sm font-medium text-gray-700 mb-2">Username</label> <input type="text" id="loginUsername" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+     </div>
+     <div><label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-2">Password</label> <input type="password" id="loginPassword" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+     </div><button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium transition-colors"> Sign In </button>
+    </form><button onclick="showForgotPassword()" class="w-full text-center text-sm text-emerald-600 hover:text-emerald-700 mt-4 font-medium"> Forgot Password? </button>
+    <div class="mt-6 pt-6 border-t border-gray-200">
+     <p class="text-xs text-gray-500 text-center">Don't have an account? <button onclick="showRegister()" class="text-emerald-600 hover:text-emerald-700 font-medium">Create Account</button></p>
+    </div>
+   </div>
+  </div><!-- Register Screen -->
+  <div id="registerScreen" class="h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 hidden">
+   <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div class="text-center mb-8">
+     <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4">
+      <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+      </svg>
+     </div>
+     <h1 class="text-2xl font-bold text-gray-900">Create Account</h1>
+     <p class="text-gray-500 mt-2">Set up your invoice generator</p>
+    </div>
+    <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-5">
+     <div><label for="regUsername" class="block text-sm font-medium text-gray-700 mb-2">Username</label> <input type="text" id="regUsername" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+     </div>
+     <div><label for="regEmail" class="block text-sm font-medium text-gray-700 mb-2">Email (for password recovery)</label> <input type="email" id="regEmail" value="info@aureanorg.com" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+     </div>
+     <div><label for="regPassword" class="block text-sm font-medium text-gray-700 mb-2">Password</label> <input type="password" id="regPassword" required minlength="6" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+      <p class="text-xs text-gray-500 mt-1">At least 6 characters</p>
+     </div>
+     <div><label for="regConfirmPassword" class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label> <input type="password" id="regConfirmPassword" required minlength="6" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+     </div><button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium transition-colors"> Create Account </button>
+    </form><button onclick="showLogin()" class="w-full text-center text-sm text-gray-600 hover:text-gray-900 mt-4"> Already have an account? <span class="text-emerald-600 font-medium">Sign In</span> </button>
+   </div>
+  </div><!-- Forgot Password Screen -->
+  <div id="forgotScreen" class="h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 hidden">
+   <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div class="text-center mb-8">
+     <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+      <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+      </svg>
+     </div>
+     <h1 class="text-2xl font-bold text-gray-900">Reset Password</h1>
+     <p class="text-gray-500 mt-2">Enter both your username and email to recover</p>
+    </div>
+    <form id="forgotForm" onsubmit="handleForgotPassword(event)" class="space-y-5">
+     <div><label for="forgotUsername" class="block text-sm font-medium text-gray-700 mb-2">Username</label> <input type="text" id="forgotUsername" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Enter your username">
+     </div>
+     <div><label for="forgotEmail" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label> <input type="email" id="forgotEmail" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Enter your email">
+     </div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"> Send Recovery Email </button>
+    </form><button onclick="showLogin()" class="w-full text-center text-sm text-gray-600 hover:text-gray-900 mt-4"> <span class="text-blue-600 font-medium">← Back to Sign In</span> </button>
+   </div>
+  </div><!-- Main App -->
+  <div id="app" class="h-full overflow-auto hidden">
+   <div class="max-w-6xl mx-auto p-6"><!-- Header -->
+    <header class="mb-8 no-print">
+     <div class="flex items-center justify-between">
+      <div>
+       <h1 id="page-title" class="text-3xl font-bold text-gray-900">Invoice Generator</h1>
+       <p class="text-gray-500 mt-1">Create professional invoices instantly</p>
+      </div>
+      <div class="flex gap-3 flex-wrap"><button onclick="showSettings()" class="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg> Settings </button> <button onclick="downloadWebApp()" class="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg> Download App </button> <button onclick="handleLogout()" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg> Logout </button> <button onclick="downloadPDF()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg> Download PDF </button> <button onclick="window.print()" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 text-white px-5 py-2.5 rounded-lg font-medium transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+        </svg> Print </button>
+      </div>
+     </div>
+    </header>
+    <div class="grid lg:grid-cols-2 gap-8"><!-- Form Section -->
+     <div class="no-print space-y-6"><!-- Invoice Details -->
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+       <h2 class="font-semibold text-lg mb-4 text-gray-900">Invoice Details</h2>
+       <div class="grid grid-cols-2 gap-4">
+        <div><label class="block text-sm font-medium text-gray-600 mb-1">Invoice Number</label> <input type="text" id="invoiceNumber" value="INV-001" onchange="updatePreview()" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+        </div>
+        <div><label class="block text-sm font-medium text-gray-600 mb-1">Date</label> <input type="date" id="invoiceDate" onchange="updatePreview()" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+        </div>
+       </div>
+      </div><!-- Customer Details -->
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+       <h2 class="font-semibold text-lg mb-4 text-gray-900">Customer Details</h2>
+       <div class="space-y-4">
+        <div><label class="block text-sm font-medium text-gray-600 mb-1">Customer Name</label> <input type="text" id="customerName" placeholder="John Doe" onchange="updatePreview()" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+        </div>
+        <div><label class="block text-sm font-medium text-gray-600 mb-1">Customer Email</label> <input type="email" id="customerEmail" placeholder="customer@email.com" onchange="updatePreview()" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+        </div>
+        <div><label class="block text-sm font-medium text-gray-600 mb-1">Customer Address</label> <textarea id="customerAddress" rows="2" placeholder="123 Customer Street, City, Country" onchange="updatePreview()" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none"></textarea>
+        </div>
+        <div><label class="block text-sm font-medium text-gray-600 mb-1">Customer Phone</label> <input type="tel" id="customerPhone" placeholder="+60 123 456 789" onchange="updatePreview()" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+        </div>
+       </div>
+      </div><!-- Items -->
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+       <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-lg text-gray-900">Invoice Items</h2><button onclick="addItem()" class="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-sm transition-colors">
+         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+         </svg> Add Item </button>
+       </div>
+       <div id="itemsContainer" class="space-y-3"></div>
+      </div><!-- Notes -->
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+       <h2 class="font-semibold text-lg mb-4 text-gray-900">Notes</h2><textarea id="invoiceNotes" rows="3" placeholder="Payment terms, bank details, thank you message..." onchange="updatePreview()" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none"></textarea>
+      </div>
+     </div><!-- Invoice Preview -->
+     <div class="invoice-preview rounded-xl overflow-hidden" id="invoicePreview" style="max-width: 595px; margin: 0 auto;">
+      <div class="px-8 py-8 bg-white"><!-- Header Section -->
+       <div class="flex justify-between items-start mb-8 pb-6 border-b-2 border-gray-200">
+        <div class="flex items-start gap-4"><img id="previewCompanyLogo" class="hidden w-20 h-20 object-contain rounded-lg" alt="Company Logo">
+         <div>
+          <h1 id="previewCompanyName" class="text-2xl font-bold text-gray-900">Your Company Name</h1>
+          <p id="previewCompanyAddress" class="text-gray-600 mt-2 text-sm">123 Business Street</p>
+          <p id="previewCompanyEmail" class="text-gray-600 text-sm">your@email.com</p>
+          <p id="previewCompanyPhone" class="text-gray-600 text-sm">+60 123 456 789</p>
+         </div>
+        </div>
+        <div class="text-right">
+         <h2 class="text-4xl font-bold text-emerald-600 mb-2">INVOICE</h2>
+         <p class="text-gray-600 text-sm"><span class="font-semibold">#</span><span id="previewInvoiceNumber">INV-001</span></p>
+         <p class="text-gray-600 text-sm mt-1"><span class="font-medium">Date:</span> <span id="previewDate">—</span></p>
+        </div>
+       </div><!-- Bill To Section -->
+       <div class="mb-8">
+        <h3 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3">Bill To</h3>
+        <p id="previewCustomerName" class="font-bold text-gray-900 text-lg mb-1">Customer Name</p>
+        <p id="previewCustomerAddress" class="text-gray-600 text-sm whitespace-pre-line mb-1">Customer Address</p>
+        <p id="previewCustomerEmail" class="text-gray-600 text-sm"></p>
+        <p id="previewCustomerPhone" class="text-gray-600 text-sm"></p>
+       </div><!-- Items Table -->
+       <div class="mb-8">
+        <table class="w-full">
+         <thead>
+          <tr class="bg-gray-100 border-b-2 border-gray-300">
+           <th class="text-left py-3 px-4 text-sm font-bold text-gray-700 uppercase tracking-wide">Description</th>
+           <th class="text-center py-3 px-4 text-sm font-bold text-gray-700 uppercase tracking-wide w-24">Qty</th>
+           <th class="text-right py-3 px-4 text-sm font-bold text-gray-700 uppercase tracking-wide w-32">Price</th>
+           <th class="text-right py-3 px-4 text-sm font-bold text-gray-700 uppercase tracking-wide w-32">Amount</th>
+          </tr>
+         </thead>
+         <tbody id="previewItems"></tbody>
+        </table>
+       </div><!-- Totals Section -->
+       <div class="flex justify-end mb-8">
+        <div class="w-80">
+         <div class="space-y-2">
+          <div class="flex justify-between py-2 text-gray-700"><span class="font-medium">Subtotal</span> <span id="previewSubtotal" class="font-semibold">RM 0.00</span>
+          </div>
+          <div class="flex justify-between py-2 text-gray-700 border-b border-gray-300"><span class="font-medium">Tax (0%)</span> <span id="previewTax" class="font-semibold">RM 0.00</span>
+          </div>
+          <div class="flex justify-between pt-3 bg-emerald-50 px-4 py-3 rounded-lg"><span class="text-xl font-bold text-gray-900">Total Due</span> <span id="previewTotal" class="text-2xl font-bold text-emerald-600">RM 0.00</span>
+          </div>
+         </div>
+        </div>
+       </div><!-- Notes Section -->
+       <div id="previewNotesSection" class="bg-blue-50 border-l-4 border-blue-500 p-5 rounded-lg hidden mb-6">
+        <h3 class="text-sm font-bold text-blue-900 uppercase tracking-wide mb-2">Notes</h3>
+        <p id="previewNotes" class="text-blue-900 text-sm whitespace-pre-line"></p>
+       </div><!-- Footer -->
+       <div class="text-center pt-6 border-t-2 border-gray-200">
+        <p class="text-emerald-600 font-semibold text-lg mb-1">Thank you for your business!</p>
+        <p class="text-gray-500 text-sm">We appreciate your prompt payment</p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div><!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50"><span id="toastMessage"></span>
+  </div><!-- Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" onclick="hideSettingsOnBackdrop(event)">
+   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90%] overflow-y-auto m-4" onclick="event.stopPropagation()">
+    <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+     <h2 class="text-2xl font-bold text-gray-900">Company Settings</h2><button onclick="hideSettings()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+      <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg></button>
+    </div>
+    <div class="p-6 space-y-6"><!-- Account Settings -->
+     <div class="bg-gray-50 rounded-xl p-5">
+      <h3 class="font-semibold text-lg mb-4 text-gray-900">Account Information</h3>
+      <div class="space-y-4">
+       <div><label class="block text-sm font-medium text-gray-700 mb-2">Username</label> <input type="text" id="settingsUsername" readonly class="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+       </div>
+       <div><label class="block text-sm font-medium text-gray-700 mb-2">Email</label> <input type="email" id="settingsEmail" readonly class="w-full px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+       </div>
+      </div>
+     </div><!-- Company Details -->
+     <div class="bg-gray-50 rounded-xl p-5">
+      <h3 class="font-semibold text-lg mb-4 text-gray-900">Company Details</h3>
+      <form id="companyForm" onsubmit="saveCompanyDetails(event)" class="space-y-4">
+       <div><label class="block text-sm font-medium text-gray-700 mb-2">Company Logo</label>
+        <div class="flex items-center gap-4">
+         <div id="logoPreviewContainer" class="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-white overflow-hidden"><img id="logoPreview" class="hidden w-full h-full object-contain" alt="Company Logo" loading="lazy">
+          <svg id="logoPlaceholder" class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+         </div>
+         <div class="flex-1"><input type="file" id="logoUpload" accept="image/*" onchange="handleLogoUpload(event)" class="hidden"> <button type="button" onclick="document.getElementById('logoUpload').click()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors mb-2"> Upload Logo </button> <button type="button" onclick="removeLogo()" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors"> Remove Logo </button>
+          <p class="text-xs text-gray-500 mt-2">PNG, JPG, or SVG (recommended: square, max 2MB)</p>
+         </div>
+        </div>
+       </div>
+       <div><label for="settingsCompanyName" class="block text-sm font-medium text-gray-700 mb-2">Company Name</label> <input type="text" id="settingsCompanyName" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+       </div>
+       <div><label for="settingsCompanyAddress" class="block text-sm font-medium text-gray-700 mb-2">Company Address</label> <textarea id="settingsCompanyAddress" rows="2" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"></textarea>
+       </div>
+       <div><label for="settingsCompanyEmail" class="block text-sm font-medium text-gray-700 mb-2">Company Email</label> <input type="email" id="settingsCompanyEmail" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+       </div>
+       <div><label for="settingsCompanyPhone" class="block text-sm font-medium text-gray-700 mb-2">Company Phone</label> <input type="tel" id="settingsCompanyPhone" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+       </div><button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium transition-colors"> Save Company Details </button>
+      </form>
+     </div><!-- Change Password -->
+     <div class="bg-gray-50 rounded-xl p-5">
+      <h3 class="font-semibold text-lg mb-4 text-gray-900">Change Password</h3>
+      <form id="changePasswordForm" onsubmit="changePassword(event)" class="space-y-4">
+       <div><label for="currentPassword" class="block text-sm font-medium text-gray-700 mb-2">Current Password</label> <input type="password" id="currentPassword" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+       </div>
+       <div><label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">New Password</label> <input type="password" id="newPassword" required minlength="6" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+       </div>
+       <div><label for="confirmNewPassword" class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label> <input type="password" id="confirmNewPassword" required minlength="6" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+       </div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors"> Update Password </button>
+      </form>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    // Authentication and User Management
+    let currentUser = null;
+    const STORAGE_PREFIX = 'invoiceGen_';
+
+    function getUsers() {
+      const users = localStorage.getItem(STORAGE_PREFIX + 'users');
+      return users ? JSON.parse(users) : {};
+    }
+
+    function saveUsers(users) {
+      localStorage.setItem(STORAGE_PREFIX + 'users', JSON.stringify(users));
+    }
+
+    function getCurrentUser() {
+      const username = localStorage.getItem(STORAGE_PREFIX + 'currentUser');
+      if (username) {
+        const users = getUsers();
+        return users[username];
+      }
+      return null;
+    }
+
+    function setCurrentUser(username) {
+      localStorage.setItem(STORAGE_PREFIX + 'currentUser', username);
+      const users = getUsers();
+      currentUser = users[username];
+    }
+
+    function clearCurrentUser() {
+      localStorage.removeItem(STORAGE_PREFIX + 'currentUser');
+      currentUser = null;
+    }
+
+    // Screen Navigation
+    function showLogin() {
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('registerScreen').classList.add('hidden');
+      document.getElementById('forgotScreen').classList.add('hidden');
+      document.getElementById('app').classList.add('hidden');
+    }
+
+    function showRegister() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('registerScreen').classList.remove('hidden');
+      document.getElementById('forgotScreen').classList.add('hidden');
+      document.getElementById('app').classList.add('hidden');
+    }
+
+    function showForgotPassword() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('registerScreen').classList.add('hidden');
+      document.getElementById('forgotScreen').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+      // Clear form fields
+      document.getElementById('forgotForm').reset();
+    }
+
+    function showApp() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('registerScreen').classList.add('hidden');
+      document.getElementById('forgotScreen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+    }
+
+    // Authentication Handlers
+    function handleLogin(event) {
+      event.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      const users = getUsers();
+      const user = users[username];
+
+      if (!user) {
+        showToast('Username not found. Please create an account.');
+        return;
+      }
+
+      if (user.password !== password) {
+        showToast('Incorrect password. Please try again.');
+        return;
+      }
+
+      setCurrentUser(username);
+      loadUserData();
+      showApp();
+      showToast('Welcome back, ' + username + '!');
+      document.getElementById('loginForm').reset();
+    }
+
+    function handleRegister(event) {
+      event.preventDefault();
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+      if (password !== confirmPassword) {
+        showToast('Passwords do not match!');
+        return;
+      }
+
+      const users = getUsers();
+      if (users[username]) {
+        showToast('Username already exists. Please choose another.');
+        return;
+      }
+
+      users[username] = {
+        username: username,
+        email: email,
+        password: password,
+        companyName: 'Your Company Name',
+        companyAddress: '123 Business Street',
+        companyEmail: 'your@email.com',
+        companyPhone: '+60 123 456 789',
+        companyLogo: ''
+      };
+
+      saveUsers(users);
+      setCurrentUser(username);
+      loadUserData();
+      showApp();
+      showToast('Account created successfully!');
+      document.getElementById('registerForm').reset();
+    }
+
+    function handleForgotPassword(event) {
+      event.preventDefault();
+      const username = document.getElementById('forgotUsername').value.trim();
+      const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+
+      const users = getUsers();
+      const user = users[username];
+
+      // Check if username exists
+      if (!user) {
+        showToast('Username not found. Please check and try again.');
+        return;
+      }
+
+      // Check if email matches
+      if (user.email.toLowerCase() !== email) {
+        showToast('Email does not match the username. Please verify both fields.');
+        return;
+      }
+
+      // Both username and email are correct, proceed with recovery
+      const subject = encodeURIComponent('Invoice Generator - Password Recovery');
+      const body = encodeURIComponent(
+        `Password Recovery Request\n\n` +
+        `Username: ${user.username}\n` +
+        `Password: ${user.password}\n` +
+        `Email: ${user.email}\n\n` +
+        `Please keep this information secure.\n\n` +
+        `If you did not request this, please ignore this email.`
+      );
+
+      // Open email client
+      window.open(`mailto:${user.email}?subject=${subject}&body=${body}`, '_blank');
+      
+      showToast('Recovery email opened! Check your email client for your credentials.');
+      document.getElementById('forgotForm').reset();
+      setTimeout(() => showLogin(), 2500);
+    }
+
+    function handleLogout() {
+      clearCurrentUser();
+      showLogin();
+      showToast('Logged out successfully.');
+    }
+
+    // Logo Management
+    function handleLogoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('File size must be less than 2MB');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        showToast('Please upload an image file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const logoData = e.target.result;
+        
+        // Update preview in settings
+        const logoPreview = document.getElementById('logoPreview');
+        const logoPlaceholder = document.getElementById('logoPlaceholder');
+        logoPreview.src = logoData;
+        logoPreview.classList.remove('hidden');
+        logoPlaceholder.classList.add('hidden');
+
+        // Save to current user
+        if (currentUser) {
+          currentUser.companyLogo = logoData;
+          const users = getUsers();
+          users[currentUser.username] = currentUser;
+          saveUsers(users);
+          updateCompanyPreview();
+          showToast('Logo uploaded successfully!');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeLogo() {
+      if (!currentUser) return;
+
+      currentUser.companyLogo = '';
+      const users = getUsers();
+      users[currentUser.username] = currentUser;
+      saveUsers(users);
+
+      // Update preview in settings
+      const logoPreview = document.getElementById('logoPreview');
+      const logoPlaceholder = document.getElementById('logoPlaceholder');
+      logoPreview.src = '';
+      logoPreview.classList.add('hidden');
+      logoPlaceholder.classList.remove('hidden');
+
+      updateCompanyPreview();
+      showToast('Logo removed successfully!');
+    }
+
+    // Settings Modal
+    function showSettings() {
+      if (!currentUser) return;
+
+      document.getElementById('settingsUsername').value = currentUser.username;
+      document.getElementById('settingsEmail').value = currentUser.email;
+      document.getElementById('settingsCompanyName').value = currentUser.companyName;
+      document.getElementById('settingsCompanyAddress').value = currentUser.companyAddress;
+      document.getElementById('settingsCompanyEmail').value = currentUser.companyEmail;
+      document.getElementById('settingsCompanyPhone').value = currentUser.companyPhone;
+
+      // Load logo preview
+      const logoPreview = document.getElementById('logoPreview');
+      const logoPlaceholder = document.getElementById('logoPlaceholder');
+      if (currentUser.companyLogo) {
+        logoPreview.src = currentUser.companyLogo;
+        logoPreview.classList.remove('hidden');
+        logoPlaceholder.classList.add('hidden');
+      } else {
+        logoPreview.src = '';
+        logoPreview.classList.add('hidden');
+        logoPlaceholder.classList.remove('hidden');
+      }
+
+      document.getElementById('settingsModal').classList.remove('hidden');
+      document.getElementById('settingsModal').classList.add('flex');
+    }
+
+    function hideSettings() {
+      document.getElementById('settingsModal').classList.add('hidden');
+      document.getElementById('settingsModal').classList.remove('flex');
+      document.getElementById('changePasswordForm').reset();
+    }
+
+    function hideSettingsOnBackdrop(event) {
+      if (event.target.id === 'settingsModal') {
+        hideSettings();
+      }
+    }
+
+    function saveCompanyDetails(event) {
+      event.preventDefault();
+      if (!currentUser) return;
+
+      const companyName = document.getElementById('settingsCompanyName').value.trim();
+      const companyAddress = document.getElementById('settingsCompanyAddress').value.trim();
+      const companyEmail = document.getElementById('settingsCompanyEmail').value.trim();
+      const companyPhone = document.getElementById('settingsCompanyPhone').value.trim();
+
+      currentUser.companyName = companyName;
+      currentUser.companyAddress = companyAddress;
+      currentUser.companyEmail = companyEmail;
+      currentUser.companyPhone = companyPhone;
+
+      const users = getUsers();
+      users[currentUser.username] = currentUser;
+      saveUsers(users);
+
+      updateCompanyPreview();
+      showToast('Company details saved successfully!');
+    }
+
+    function changePassword(event) {
+      event.preventDefault();
+      if (!currentUser) return;
+
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+      if (currentPassword !== currentUser.password) {
+        showToast('Current password is incorrect.');
+        return;
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        showToast('New passwords do not match.');
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showToast('Password must be at least 6 characters.');
+        return;
+      }
+
+      currentUser.password = newPassword;
+      const users = getUsers();
+      users[currentUser.username] = currentUser;
+      saveUsers(users);
+
+      showToast('Password updated successfully!');
+      document.getElementById('changePasswordForm').reset();
+    }
+
+    function loadUserData() {
+      if (!currentUser) return;
+      // Initialize companyLogo if not present
+      if (!currentUser.hasOwnProperty('companyLogo')) {
+        currentUser.companyLogo = '';
+      }
+      updateCompanyPreview();
+    }
+
+    function updateCompanyPreview() {
+      if (!currentUser) return;
+      document.getElementById('previewCompanyName').textContent = currentUser.companyName;
+      document.getElementById('previewCompanyAddress').textContent = currentUser.companyAddress;
+      document.getElementById('previewCompanyEmail').textContent = currentUser.companyEmail;
+      document.getElementById('previewCompanyPhone').textContent = currentUser.companyPhone;
+      
+      // Update logo in invoice preview
+      const previewLogo = document.getElementById('previewCompanyLogo');
+      if (currentUser.companyLogo) {
+        previewLogo.src = currentUser.companyLogo;
+        previewLogo.classList.remove('hidden');
+      } else {
+        previewLogo.src = '';
+        previewLogo.classList.add('hidden');
+      }
+    }
+
+    // Download Web App Function
+    function downloadWebApp() {
+      try {
+        showToast('Preparing download...');
+        
+        // Get current page HTML
+        const doctype = '<!DOCTYPE html>';
+        const htmlContent = document.documentElement.outerHTML;
+        const fullHtml = doctype + '\n' + htmlContent;
+        
+        // Create blob with proper MIME type
+        const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+        
+        // Create temporary download link
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.href = url;
+        link.download = 'invoice-generator.html';
+        link.style.display = 'none';
+        
+        // Add to document, click, and remove
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          showToast('App downloaded successfully! Open the HTML file in your browser.');
+        }, 100);
+        
+      } catch (error) {
+        console.error('Download error:', error);
+        showToast('Download failed. Please try again.');
+      }
+    }
+
+    // Invoice Functions
+    const defaultConfig = {
+      company_name: 'Your Company Name',
+      company_address: '123 Business Street',
+      company_email: 'your@email.com',
+      company_phone: '+60 123 456 789',
+      primary_color: '#059669',
+      background_color: '#ffffff',
+      text_color: '#1f2937',
+      accent_color: '#f9fafb',
+      border_color: '#e5e7eb'
+    };
+
+    let items = [{ description: '', quantity: 1, price: 0 }];
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      toastMessage.textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    function renderItems() {
+      const container = document.getElementById('itemsContainer');
+      container.innerHTML = items.map((item, index) => `
+        <div class="flex gap-3 items-start p-3 bg-gray-50 rounded-lg">
+          <div class="flex-1">
+            <input type="text" value="${item.description}" onchange="updateItem(${index}, 'description', this.value)" placeholder="Item description" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm">
+          </div>
+          <div class="w-20">
+            <input type="number" value="${item.quantity}" onchange="updateItem(${index}, 'quantity', this.value)" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm text-center">
+          </div>
+          <div class="w-28">
+            <input type="number" value="${item.price}" onchange="updateItem(${index}, 'price', this.value)" min="0" step="0.01" placeholder="0.00" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm text-right">
+          </div>
+          <button onclick="removeItem(${index})" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors ${items.length === 1 ? 'opacity-30 cursor-not-allowed' : ''}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addItem() {
+      items.push({ description: '', quantity: 1, price: 0 });
+      renderItems();
+      updatePreview();
+    }
+
+    function removeItem(index) {
+      if (items.length > 1) {
+        items.splice(index, 1);
+        renderItems();
+        updatePreview();
+      }
+    }
+
+    function updateItem(index, field, value) {
+      if (field === 'quantity') {
+        items[index][field] = parseInt(value) || 1;
+      } else if (field === 'price') {
+        items[index][field] = parseFloat(value) || 0;
+      } else {
+        items[index][field] = value;
+      }
+      updatePreview();
+    }
+
+    function updatePreview() {
+      document.getElementById('previewInvoiceNumber').textContent = document.getElementById('invoiceNumber').value || 'INV-001';
+      document.getElementById('previewDate').textContent = formatDate(document.getElementById('invoiceDate').value);
+      document.getElementById('previewCustomerName').textContent = document.getElementById('customerName').value || 'Customer Name';
+      document.getElementById('previewCustomerAddress').textContent = document.getElementById('customerAddress').value || 'Customer Address';
+      document.getElementById('previewCustomerEmail').textContent = document.getElementById('customerEmail').value;
+      document.getElementById('previewCustomerPhone').textContent = document.getElementById('customerPhone').value;
+
+      const notes = document.getElementById('invoiceNotes').value;
+      const notesSection = document.getElementById('previewNotesSection');
+      if (notes) {
+        notesSection.classList.remove('hidden');
+        document.getElementById('previewNotes').textContent = notes;
+      } else {
+        notesSection.classList.add('hidden');
+      }
+
+      let subtotal = 0;
+      const previewItems = document.getElementById('previewItems');
+      previewItems.innerHTML = items.map(item => {
+        const amount = item.quantity * item.price;
+        subtotal += amount;
+        return `
+          <tr class="border-b border-gray-100">
+            <td class="py-3 px-4 text-gray-800">${item.description || '—'}</td>
+            <td class="py-3 px-4 text-center text-gray-600">${item.quantity}</td>
+            <td class="py-3 px-4 text-right text-gray-600">RM ${item.price.toFixed(2)}</td>
+            <td class="py-3 px-4 text-right font-semibold text-gray-900">RM ${amount.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('previewSubtotal').textContent = `RM ${subtotal.toFixed(2)}`;
+      document.getElementById('previewTax').textContent = 'RM 0.00';
+      document.getElementById('previewTotal').textContent = `RM ${subtotal.toFixed(2)}`;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function downloadPDF() {
+      const invoiceNumber = document.getElementById('invoiceNumber').value || 'INV-001';
+      
+      if (typeof html2pdf === 'undefined') {
+        showToast('PDF library not loaded. Please refresh the page.');
+        return;
+      }
+      
+      showToast('Generating PDF... Please wait');
+
+      const element = document.getElementById('invoicePreview');
+      
+      html2pdf()
+        .from(element)
+        .set({
+          margin: 10,
+          filename: invoiceNumber + '.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
+        })
+        .save()
+        .then(function() {
+          showToast('PDF downloaded successfully!');
+        })
+        .catch(function(error) {
+          console.error('PDF Error:', error);
+          showToast('Error generating PDF. Please try again.');
+        });
+    }
+
+    function getInvoiceSummary() {
+      const invoiceNumber = document.getElementById('invoiceNumber').value || 'INV-001';
+      const customerName = document.getElementById('customerName').value || 'Customer';
+      const total = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+      return { invoiceNumber, customerName, total };
+    }
+
+    async function onConfigChange(config) {
+      document.getElementById('previewCompanyName').textContent = config.company_name || defaultConfig.company_name;
+      document.getElementById('previewCompanyAddress').textContent = config.company_address || defaultConfig.company_address;
+      document.getElementById('previewCompanyEmail').textContent = config.company_email || defaultConfig.company_email;
+      document.getElementById('previewCompanyPhone').textContent = config.company_phone || defaultConfig.company_phone;
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => { config.background_color = value; window.elementSdk.setConfig({ background_color: value }); }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => { config.text_color = value; window.elementSdk.setConfig({ text_color: value }); }
+          },
+          {
+            get: () => config.primary_color || defaultConfig.primary_color,
+            set: (value) => { config.primary_color = value; window.elementSdk.setConfig({ primary_color: value }); }
+          }
+        ],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ['company_name', config.company_name || defaultConfig.company_name],
+        ['company_address', config.company_address || defaultConfig.company_address],
+        ['company_email', config.company_email || defaultConfig.company_email],
+        ['company_phone', config.company_phone || defaultConfig.company_phone]
+      ]);
+    }
+
+    // Initialize
+    document.getElementById('invoiceDate').valueAsDate = new Date();
+
+    renderItems();
+    updatePreview();
+
+    // Check if user is already logged in
+    currentUser = getCurrentUser();
+    if (currentUser) {
+      loadUserData();
+      showApp();
+    } else {
+      showLogin();
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bfc5aafb6baf58c',t:'MTc2ODcyMTA4My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
